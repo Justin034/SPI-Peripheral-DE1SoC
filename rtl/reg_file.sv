@@ -19,12 +19,13 @@
 // Writes to RO registers are ignored (no error).
 // Reads/writes to 0x0C-0x7F: read 0x00, write ignored, set STATUS.ADDR_ERR.
 //
-// ADDR_* names are ADDRESSES (constants from spi_pkg). The lower-case names
+// spi_pkg::ADDR_* names are ADDRESSES (constants). The lower-case names
 // below (scratch, led_lo, ...) are the STORAGE flip-flops.
+//
+// Package items are referenced as spi_pkg::NAME rather than with
+// `import spi_pkg::*;` because Yosys does not support the import keyword.
 // -----------------------------------------------------------------------------
-module reg_file
-    import spi_pkg::*;
-(
+module reg_file (
     input  logic        clk,
     input  logic        rst_n,
 
@@ -54,7 +55,7 @@ module reg_file
     logic       addr_valid;    // 1 when addr is a mapped register (0x00-0x0B)
 
     // Compare the incoming address against the last mapped address.
-    assign addr_valid = (addr <= ADDR_LAST);
+    assign addr_valid = (addr <= spi_pkg::ADDR_LAST);
 
     // ---- Writable registers ---------------------------------------------------
     // Address decides WHICH storage register gets wr_data.
@@ -70,13 +71,13 @@ module reg_file
         end
         else if (wr_en) begin
             case (addr)
-                ADDR_SCRATCH: scratch <= wr_data;
-                ADDR_LED_LO:  led_lo  <= wr_data;
-                ADDR_LED_HI:  led_hi  <= wr_data[1:0];   // only 2 real bits
-                ADDR_HEX10:   hex10   <= wr_data;
-                ADDR_HEX32:   hex32   <= wr_data;
-                ADDR_HEX54:   hex54   <= wr_data;
-                default: ;                                // RO / unmapped: ignore
+                spi_pkg::ADDR_SCRATCH: scratch <= wr_data;
+                spi_pkg::ADDR_LED_LO:  led_lo  <= wr_data;
+                spi_pkg::ADDR_LED_HI:  led_hi  <= wr_data[1:0];   // only 2 real bits
+                spi_pkg::ADDR_HEX10:   hex10   <= wr_data;
+                spi_pkg::ADDR_HEX32:   hex32   <= wr_data;
+                spi_pkg::ADDR_HEX54:   hex54   <= wr_data;
+                default: ;                                         // RO / unmapped: ignore
             endcase
         end
     end
@@ -90,13 +91,12 @@ module reg_file
     logic [1:0] status_set;
     logic [1:0] status_clr;
 
-    always_comb begin
-        status_set                   = '0;
-        status_set[STATUS_FRAME_ERR] = frame_err_set;
-        status_set[STATUS_ADDR_ERR]  = (wr_en || rd_en) && !addr_valid;
-    end
+    // Plain assigns (not always_comb) - Icarus doesn't support bit-selects
+    // inside always_* blocks.
+    assign status_set[spi_pkg::STATUS_FRAME_ERR] = frame_err_set;
+    assign status_set[spi_pkg::STATUS_ADDR_ERR]  = (wr_en || rd_en) && !addr_valid;
 
-    assign status_clr = (wr_en && addr == ADDR_STATUS) ? wr_data[1:0] : 2'b00;
+    assign status_clr = (wr_en && addr == spi_pkg::ADDR_STATUS) ? wr_data[1:0] : 2'b00;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) status <= '0;                                  // no errors after reset
@@ -110,23 +110,28 @@ module reg_file
     end
 
     // ---- Read mux (combinational) --------------------------------------------
+    // Switch values split outside the always_comb (Icarus bit-select limitation).
+    logic [7:0] sw_lo_val, sw_hi_val;
+    assign sw_lo_val = sw[7:0];
+    assign sw_hi_val = {6'b0, sw[9:8]};
+
     // Default first so every path assigns rd_data (no latch).
     always_comb begin
         rd_data = 8'h00;
         case (addr)
-            ADDR_ID:        rd_data = ID_VALUE;
-            ADDR_VERSION:   rd_data = VERSION_VALUE;
-            ADDR_STATUS:    rd_data = {6'b0, status};
-            ADDR_TXN_COUNT: rd_data = txn_count;
-            ADDR_SCRATCH:   rd_data = scratch;
-            ADDR_LED_LO:    rd_data = led_lo;
-            ADDR_LED_HI:    rd_data = {6'b0, led_hi};
-            ADDR_HEX10:     rd_data = hex10;
-            ADDR_HEX32:     rd_data = hex32;
-            ADDR_HEX54:     rd_data = hex54;
-            ADDR_SW_LO:     rd_data = sw[7:0];
-            ADDR_SW_HI:     rd_data = {6'b0, sw[9:8]};
-            default:        rd_data = 8'h00;              // unmapped reads 0
+            spi_pkg::ADDR_ID:        rd_data = spi_pkg::ID_VALUE;
+            spi_pkg::ADDR_VERSION:   rd_data = spi_pkg::VERSION_VALUE;
+            spi_pkg::ADDR_STATUS:    rd_data = {6'b0, status};
+            spi_pkg::ADDR_TXN_COUNT: rd_data = txn_count;
+            spi_pkg::ADDR_SCRATCH:   rd_data = scratch;
+            spi_pkg::ADDR_LED_LO:    rd_data = led_lo;
+            spi_pkg::ADDR_LED_HI:    rd_data = {6'b0, led_hi};
+            spi_pkg::ADDR_HEX10:     rd_data = hex10;
+            spi_pkg::ADDR_HEX32:     rd_data = hex32;
+            spi_pkg::ADDR_HEX54:     rd_data = hex54;
+            spi_pkg::ADDR_SW_LO:     rd_data = sw_lo_val;
+            spi_pkg::ADDR_SW_HI:     rd_data = sw_hi_val;
+            default:                 rd_data = 8'h00;     // unmapped reads 0
         endcase
     end
 

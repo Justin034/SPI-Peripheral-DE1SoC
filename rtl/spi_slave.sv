@@ -20,9 +20,7 @@
 // edge detector to see them, so SCLK <= 50 MHz / 4 = 12.5 MHz in theory.
 // Plan on ~6 MHz or below for margin.
 // -----------------------------------------------------------------------------
-module spi_slave
-    import spi_pkg::*;
-(
+module spi_slave (
     input  logic       clk,
     input  logic       rst_n,
 
@@ -43,6 +41,9 @@ module spi_slave
     output logic       frame_err_set,  // 1-cycle pulse: frame had the wrong length
     output logic       txn_inc         // 1-cycle pulse: a valid frame completed
 );
+
+    // Package items are referenced as spi_pkg::NAME (no `import`) because
+    // Yosys does not support the import keyword.
 
     // =========================================================================
     // Datapath
@@ -89,7 +90,9 @@ module spi_slave
         .shift_en   (sclk_rise && !cs_n_s),
         .din        (mosi_s),
         .q          (rx_byte),
-        .serial_out ()                  // unused on the receive side
+        /* verilator lint_off PINCONNECTEMPTY */
+        .serial_out ()                  // unused on the receive side (intentional)
+        /* verilator lint_on PINCONNECTEMPTY */
     );
 
     // ---- 4. Bit counter ------------------------------------------------------
@@ -132,6 +135,11 @@ module spi_slave
             {rw, addr} <= rx_byte;      // bit 7 -> rw, bits 6:0 -> addr
         end
     end
+
+    // RW bit of the command byte, as its own signal so the FSM's always_comb
+    // doesn't need a bit-select (Icarus warns about those).
+    logic cmd_is_read;
+    assign cmd_is_read = rx_byte[7];
 
     // When CS_N rises after a 16-bit write frame, the receive shift register
     // still holds the last 8 bits received = the data byte. No extra storage
@@ -190,11 +198,11 @@ module spi_slave
             next_state = IDLE;
 
             if (state != IDLE) begin
-                if (!rw && bit_count == WRITE_FRAME_BITS) begin
+                if (!rw && bit_count == 5'(spi_pkg::WRITE_FRAME_BITS)) begin
                     wr_en   = 1'b1;          // commit the write NOW, not at bit 16
                     txn_inc = 1'b1;
                 end
-                else if (rw && bit_count == READ_FRAME_BITS) begin
+                else if (rw && bit_count == 5'(spi_pkg::READ_FRAME_BITS)) begin
                     txn_inc = 1'b1;          // read already happened; just count it
                 end
                 else begin
@@ -211,7 +219,8 @@ module spi_slave
                 CMD: begin
                     if (bit_count == 5'd8) begin
                         cmd_capture = 1'b1;
-                        next_state  = rx_byte[7] ? RD_TURN : WR_DATA;
+                        if (cmd_is_read) next_state = RD_TURN;
+                        else             next_state = WR_DATA;
                     end
                 end
 

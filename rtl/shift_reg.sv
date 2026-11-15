@@ -30,7 +30,7 @@ module shift_reg #(
         end
         else begin
             if(shift_en) begin
-                q <= (q<<1) | din;
+                q <= {q[WIDTH-2:0], din};   // drop MSB, append din at LSB
             end
         end
     end

@@ -15,7 +15,9 @@
 // -----------------------------------------------------------------------------
 module spi_top (
     input  logic       CLOCK_50,
-    input  logic [3:0] KEY,        // active low push buttons; KEY[0] = reset
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic [3:0] KEY,        // active low push buttons; KEY[0] = reset, KEY[3:1] unused
+    /* verilator lint_on UNUSEDSIGNAL */
     input  logic [9:0] SW,
     output logic [9:0] LEDR,
     output logic [6:0] HEX0,

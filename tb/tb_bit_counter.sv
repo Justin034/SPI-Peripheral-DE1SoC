@@ -116,4 +116,12 @@ module tb_bit_counter;
         $finish;
     end
 
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_bit_counter) ---
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_bit_counter.vcd");
+            $dumpvars(0, tb_bit_counter);
+        end
+    end
+
 endmodule

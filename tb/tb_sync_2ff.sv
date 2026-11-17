@@ -109,4 +109,12 @@ module tb_sync_2ff;
         $finish;
     end
 
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_sync_2ff) ------
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_sync_2ff.vcd");
+            $dumpvars(0, tb_sync_2ff);
+        end
+    end
+
 endmodule

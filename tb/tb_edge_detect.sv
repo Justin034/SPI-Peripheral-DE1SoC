@@ -136,4 +136,12 @@ module tb_edge_detect;
         $finish;
     end
 
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_edge_detect) ---
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_edge_detect.vcd");
+            $dumpvars(0, tb_edge_detect);
+        end
+    end
+
 endmodule

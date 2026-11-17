@@ -105,4 +105,12 @@ module tb_shift_reg;
         $finish;
     end
 
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_shift_reg) -----
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_shift_reg.vcd");
+            $dumpvars(0, tb_shift_reg);
+        end
+    end
+
 endmodule

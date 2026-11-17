@@ -60,4 +60,12 @@ module tb_hex7seg;
         $finish;
     end
 
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_hex7seg) -------
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_hex7seg.vcd");
+            $dumpvars(0, tb_hex7seg);
+        end
+    end
+
 endmodule

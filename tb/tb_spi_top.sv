@@ -335,8 +335,17 @@ module tb_spi_top;
     // ---- Watchdog: stop if something hangs ------------------------------------
     initial begin
         #200ms;
+        errors++;                    // so tools that read `errors` see the failure
         $display("FAIL: tb_spi_top - timeout");
         $finish;
+    end
+
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_spi_top) -------
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_spi_top.vcd");
+            $dumpvars(0, tb_spi_top);
+        end
     end
 
 endmodule

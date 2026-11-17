@@ -129,4 +129,12 @@ module tb_spi_master;
         $finish;
     end
 
+    // ---- Waveforms: only with +WAVES (./run_tests.sh waves tb_spi_master) ----
+    initial begin
+        if ($test$plusargs("WAVES")) begin
+            $dumpfile("build/tb_spi_master.vcd");
+            $dumpvars(0, tb_spi_master);
+        end
+    end
+
 endmodule
